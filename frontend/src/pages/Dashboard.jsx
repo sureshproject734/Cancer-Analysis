@@ -1,21 +1,36 @@
 import React, { useState, useEffect } from 'react';
+import { db } from '../firebase';
+import { collection, getDocs, query, orderBy } from 'firebase/firestore';
 import { api } from '../api';
 import { 
   PieChart, Pie, Cell, ResponsiveContainer, 
   BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid,
-  LineChart, Line, Legend
+  Legend
 } from 'recharts';
 import { Users, AlertTriangle, CheckCircle, TrendingUp } from 'lucide-react';
 
+const MODEL_METRICS = {
+  accuracy: 0.9649,
+  precision: 0.9589,
+  recall: 0.9859
+};
+
 const Dashboard = () => {
-  const [stats, setStats] = useState(null);
+  const [stats, setStats] = useState({ total_predictions: 0, malignant_count: 0, benign_count: 0 });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const data = await api.get('/analytics');
-        setStats(data);
+        const q = query(collection(db, 'patients'), orderBy('createdAt', 'desc'));
+        const snapshot = await getDocs(q);
+        const patients = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        
+        const total = patients.length;
+        const malignant = patients.filter(p => p.prediction === 'Malignant').length;
+        const benign = patients.filter(p => p.prediction === 'Benign').length;
+        
+        setStats({ total_predictions: total, malignant_count: malignant, benign_count: benign });
       } catch (error) {
         console.error("Error fetching stats:", error);
       } finally {
@@ -28,14 +43,14 @@ const Dashboard = () => {
   if (loading) return <div className="text-center py-20 text-slate-400">Loading clinical data...</div>;
 
   const pieData = [
-    { name: 'Malignant', value: stats?.malignant_count || 0, color: '#EF4444' },
-    { name: 'Benign', value: stats?.benign_count || 0, color: '#22C55E' },
+    { name: 'Malignant', value: stats.malignant_count || 0, color: '#EF4444' },
+    { name: 'Benign', value: stats.benign_count || 0, color: '#22C55E' },
   ];
 
   const accuracyData = [
-    { name: 'Accuracy', value: (stats?.model_metrics?.accuracy || 0) * 100 },
-    { name: 'Precision', value: (stats?.model_metrics?.precision || 0) * 100 },
-    { name: 'Recall', value: (stats?.model_metrics?.recall || 0) * 100 },
+    { name: 'Accuracy', value: MODEL_METRICS.accuracy * 100 },
+    { name: 'Precision', value: MODEL_METRICS.precision * 100 },
+    { name: 'Recall', value: MODEL_METRICS.recall * 100 },
   ];
 
   return (
@@ -43,25 +58,25 @@ const Dashboard = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard 
           title="Total Predictions" 
-          value={stats?.total_predictions || 0} 
+          value={stats.total_predictions} 
           icon={<Users className="text-secondary" />} 
-          sub="Last 30 days"
+          sub="All time"
         />
         <StatCard 
           title="Malignant Cases" 
-          value={stats?.malignant_count || 0} 
+          value={stats.malignant_count} 
           icon={<AlertTriangle className="text-danger" />} 
-          sub={`${((stats?.malignant_count / stats?.total_predictions) * 100 || 0).toFixed(1)}% ratio`}
+          sub={`${((stats.malignant_count / stats.total_predictions) * 100 || 0).toFixed(1)}% ratio`}
         />
         <StatCard 
           title="Benign Cases" 
-          value={stats?.benign_count || 0} 
+          value={stats.benign_count} 
           icon={<CheckCircle className="text-success" />} 
-          sub={`${((stats?.benign_count / stats?.total_predictions) * 100 || 0).toFixed(1)}% ratio`}
+          sub={`${((stats.benign_count / stats.total_predictions) * 100 || 0).toFixed(1)}% ratio`}
         />
         <StatCard 
           title="Model Accuracy" 
-          value={`${((stats?.model_metrics?.accuracy || 0) * 100).toFixed(1)}%`} 
+          value={`${(MODEL_METRICS.accuracy * 100).toFixed(1)}%`} 
           icon={<TrendingUp className="text-secondary" />} 
           sub="RandomForest Classifier"
         />

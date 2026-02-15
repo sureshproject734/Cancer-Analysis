@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
+import { db } from '../firebase';
+import { collection, addDoc } from 'firebase/firestore';
 import { api } from '../api';
-import { Loader2, AlertTriangle, CheckCircle, Info, Activity } from 'lucide-react';
+import { Loader2, AlertTriangle, CheckCircle, Info, Activity, FileJson, Keyboard } from 'lucide-react';
 
 const featureNames = [
   'Mean Radius', 'Mean Texture', 'Mean Perimeter', 'Mean Area', 'Mean Smoothness',
@@ -19,14 +21,49 @@ const defaultFeatures = [
 
 const PredictionForm = () => {
   const [features, setFeatures] = useState(defaultFeatures);
+  const [patientInfo, setPatientInfo] = useState({ name: '', email: '', phone: '' });
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [inputMode, setInputMode] = useState('manual'); // 'manual' or 'json'
+  const [jsonInput, setJsonInput] = useState('');
+
+  const handleInfoChange = (field, value) => {
+    setPatientInfo(prev => ({ ...prev, [field]: value }));
+  };
 
   const handleChange = (index, value) => {
     const newFeatures = [...features];
     newFeatures[index] = parseFloat(value) || 0;
     setFeatures(newFeatures);
+  };
+
+  const handleJsonPaste = () => {
+    try {
+      const parsed = JSON.parse(jsonInput);
+      if (Array.isArray(parsed)) {
+        if (parsed.length === 30) {
+          setFeatures(parsed);
+          setError(null);
+        } else {
+          setError(`Expected 30 features, got ${parsed.length}`);
+        }
+      } else if (parsed.features && Array.isArray(parsed.features)) {
+        if (parsed.features.length === 30) {
+          setFeatures(parsed.features);
+          if (parsed.patientName) setPatientInfo(prev => ({ ...prev, name: parsed.patientName }));
+          if (parsed.patientEmail) setPatientInfo(prev => ({ ...prev, email: parsed.patientEmail }));
+          if (parsed.patientPhone) setPatientInfo(prev => ({ ...prev, phone: parsed.patientPhone }));
+          setError(null);
+        } else {
+          setError(`Expected 30 features, got ${parsed.features.length}`);
+        }
+      } else {
+        setError('Invalid JSON format. Expected array or object with features array.');
+      }
+    } catch (e) {
+      setError('Invalid JSON. Please check your input.');
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -36,8 +73,28 @@ const PredictionForm = () => {
     setResult(null);
 
     try {
-      const data = await api.post('/predict', { features });
-      setResult(data);
+      const predictionData = await api.post('/predict', { 
+        features,
+        patientName: patientInfo.name,
+        patientEmail: patientInfo.email,
+        patientPhone: patientInfo.phone
+      });
+
+      await addDoc(collection(db, 'patients'), {
+        patientName: patientInfo.name,
+        patientEmail: patientInfo.email,
+        patientPhone: patientInfo.phone,
+        prediction: predictionData.prediction,
+        probability: predictionData.probability,
+        confidence: predictionData.confidence,
+        recommendation: predictionData.recommendation,
+        precautions: predictionData.precautions,
+        consultDoctor: predictionData.consultDoctor,
+        features: features,
+        createdAt: new Date().toISOString()
+      });
+
+      setResult(predictionData);
     } catch (err) {
       setError(err.message || 'Prediction failed. Please try again.');
     } finally {
@@ -47,8 +104,11 @@ const PredictionForm = () => {
 
   const handleReset = () => {
     setFeatures(defaultFeatures);
+    setPatientInfo({ name: '', email: '', phone: '' });
     setResult(null);
     setError(null);
+    setJsonInput('');
+    setInputMode('manual');
   };
 
   return (
@@ -70,10 +130,92 @@ const PredictionForm = () => {
         <form onSubmit={handleSubmit} className="bg-slate-900/50 p-6 rounded-2xl border border-slate-800">
           <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
             <Activity className="text-secondary" size={20} />
+            Patient Information
+          </h3>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div className="space-y-1">
+              <label className="text-xs text-slate-400 block">Patient Name</label>
+              <input
+                type="text"
+                value={patientInfo.name}
+                onChange={(e) => handleInfoChange('name', e.target.value)}
+                className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-secondary transition-colors"
+                placeholder="John Doe"
+                required
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs text-slate-400 block">Email</label>
+              <input
+                type="email"
+                value={patientInfo.email}
+                onChange={(e) => handleInfoChange('email', e.target.value)}
+                className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-secondary transition-colors"
+                placeholder="patient@email.com"
+                required
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs text-slate-400 block">Phone</label>
+              <input
+                type="tel"
+                value={patientInfo.phone}
+                onChange={(e) => handleInfoChange('phone', e.target.value)}
+                className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-secondary transition-colors"
+                placeholder="+1 234 567 8900"
+                required
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 mb-4">
+            <span className="text-sm text-slate-400">Input Mode:</span>
+            <button
+              type="button"
+              onClick={() => setInputMode('manual')}
+              className={`px-3 py-1 rounded-lg text-sm flex items-center gap-2 transition-colors ${
+                inputMode === 'manual' ? 'bg-secondary text-white' : 'bg-slate-800 text-slate-400'
+              }`}
+            >
+              <Keyboard size={14} /> Manual
+            </button>
+            <button
+              type="button"
+              onClick={() => setInputMode('json')}
+              className={`px-3 py-1 rounded-lg text-sm flex items-center gap-2 transition-colors ${
+                inputMode === 'json' ? 'bg-secondary text-white' : 'bg-slate-800 text-slate-400'
+              }`}
+            >
+              <FileJson size={14} /> JSON
+            </button>
+          </div>
+
+          {inputMode === 'json' ? (
+            <div className="mb-4">
+              <label className="text-xs text-slate-400 block mb-2">Paste JSON Array (30 values)</label>
+              <textarea
+                value={jsonInput}
+                onChange={(e) => setJsonInput(e.target.value)}
+                className="w-full h-40 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:border-secondary transition-colors"
+                placeholder='[14.22, 19.56, 92.55, ...]'
+              />
+              <button
+                type="button"
+                onClick={handleJsonPaste}
+                className="mt-2 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg text-sm transition-colors"
+              >
+                Load from JSON
+              </button>
+            </div>
+          ) : null}
+
+          <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
+            <Activity className="text-secondary" size={20} />
             Tumor Features Input
           </h3>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[500px] overflow-y-auto pr-2">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[400px] overflow-y-auto pr-2">
             {featureNames.map((name, index) => (
               <div key={name} className="space-y-1">
                 <label className="text-xs text-slate-400 block">{name}</label>
@@ -84,6 +226,7 @@ const PredictionForm = () => {
                   onChange={(e) => handleChange(index, e.target.value)}
                   className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-secondary transition-colors"
                   placeholder="0.00"
+                  disabled={inputMode === 'json'}
                 />
               </div>
             ))}

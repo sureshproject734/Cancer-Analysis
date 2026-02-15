@@ -1,4 +1,4 @@
-const API_BASE = '/api';
+const API_BASE = 'https://cancer-analysis.onrender.com';
 
 export const api = {
   get: async (endpoint) => {

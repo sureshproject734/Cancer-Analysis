@@ -51,20 +51,78 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Load Model
+# Model variables
+model = None
+feature_names = []
+target_names = []
+metrics = {}
+
+# Load or train model
 MODEL_PATH = "ml_api/model.joblib"
+
+def train_model():
+    """Train the breast cancer prediction model"""
+    global model, feature_names, target_names, metrics
+    
+    from sklearn.datasets import load_breast_cancer
+    from sklearn.model_selection import train_test_split
+    from sklearn.ensemble import RandomForestClassifier
+    from sklearn.metrics import accuracy_score, precision_score, recall_score
+    
+    print("Loading Breast Cancer dataset...")
+    data = load_breast_cancer()
+    X = pd.DataFrame(data.data, columns=data.feature_names)
+    y = data.target
+    
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    
+    print("Training Random Forest Classifier...")
+    model = RandomForestClassifier(n_estimators=100, random_state=42)
+    model.fit(X_train, y_train)
+    
+    y_pred = model.predict(X_test)
+    metrics = {
+        'accuracy': accuracy_score(y_test, y_pred),
+        'precision': precision_score(y_test, y_pred),
+        'recall': recall_score(y_test, y_pred)
+    }
+    
+    feature_names = data.feature_names.tolist()
+    target_names = data.target_names.tolist()
+    
+    model_data = {
+        'model': model,
+        'feature_names': feature_names,
+        'target_names': target_names,
+        'metrics': metrics
+    }
+    
+    os.makedirs("ml_api", exist_ok=True)
+    joblib.dump(model_data, MODEL_PATH)
+    print(f"Model trained and saved. Accuracy: {metrics['accuracy']:.4f}")
+    return model
+
+# Load existing model or train new one
 if os.path.exists(MODEL_PATH):
-    model_data = joblib.load(MODEL_PATH)
-    model = model_data['model']
-    feature_names = model_data['feature_names']
-    target_names = model_data['target_names']
-    metrics = model_data['metrics']
+    try:
+        model_data = joblib.load(MODEL_PATH)
+        model = model_data['model']
+        feature_names = model_data['feature_names']
+        target_names = model_data['target_names']
+        metrics = model_data['metrics']
+        print(f"Model loaded. Accuracy: {metrics.get('accuracy', 0):.4f}")
+    except Exception as e:
+        print(f"Error loading model: {e}. Training new model...")
+        train_model()
 else:
-    model = None
-    print("Warning: model.joblib not found. Run train.py first.")
+    print("Model not found. Training new model...")
+    train_model()
 
 class PredictionInput(BaseModel):
     features: List[float]
+    patientName: Optional[str] = ""
+    patientEmail: Optional[str] = ""
+    patientPhone: Optional[str] = ""
 
 @app.get("/health")
 def health_check():
@@ -160,6 +218,9 @@ async def predict(input_data: PredictionInput):
 
     result = {
         "patientId": str(uuid.uuid4())[:8],
+        "patientName": input_data.patientName,
+        "patientEmail": input_data.patientEmail,
+        "patientPhone": input_data.patientPhone,
         "prediction": label,
         "probability": round(prob, 4),
         "confidence": confidence,

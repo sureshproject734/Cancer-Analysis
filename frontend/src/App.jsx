@@ -1,12 +1,13 @@
 import React, { useState, useEffect, createContext, useContext } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, Navigate, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, FlaskConical, History, BarChart3, Activity, LogOut, User } from 'lucide-react';
+import { LayoutDashboard, FlaskConical, History, BarChart3, Activity, LogOut, User, BookOpen } from 'lucide-react';
 import { onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut } from 'firebase/auth';
 import { auth } from './firebase';
 import Dashboard from './pages/Dashboard';
 import PredictionForm from './pages/PredictionForm';
 import PatientHistory from './pages/PatientHistory';
 import Analytics from './pages/Analytics';
+import Learn from './pages/Learn';
 
 const AuthContext = createContext(null);
 
@@ -112,6 +113,7 @@ const Navbar = ({ user, onLogout }) => (
       <NavLink to="/predict" icon={<FlaskConical size={20} />} label="New Prediction" />
       <NavLink to="/history" icon={<History size={20} />} label="Patient History" />
       <NavLink to="/analytics" icon={<BarChart3 size={20} />} label="Advanced Analytics" />
+      <NavLink to="/learn" icon={<BookOpen size={20} />} label="Feature Guide" />
     </div>
 
     <div className="mt-auto space-y-4">
@@ -206,6 +208,7 @@ function AppContent() {
           <Route path="/predict" element={<PredictionForm />} />
           <Route path="/history" element={<PatientHistory />} />
           <Route path="/analytics" element={<Analytics />} />
+          <Route path="/learn" element={<Learn />} />
         </Routes>
       </main>
     </div>

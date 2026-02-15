@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { api } from '../api';
+import { db } from '../firebase';
+import { collection, getDocs, query, orderBy } from 'firebase/firestore';
 import { Search, AlertTriangle, CheckCircle, Eye, X } from 'lucide-react';
 
 const PatientHistory = () => {
@@ -14,8 +15,10 @@ const PatientHistory = () => {
 
   const fetchPatients = async () => {
     try {
-      const data = await api.get('/patient-history');
-      setPatients(data || []);
+      const q = query(collection(db, 'patients'), orderBy('createdAt', 'desc'));
+      const snapshot = await getDocs(q);
+      const patientsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setPatients(patientsData);
     } catch (error) {
       console.error("Error fetching patients:", error);
     } finally {
@@ -24,7 +27,8 @@ const PatientHistory = () => {
   };
 
   const filteredPatients = patients.filter(p => 
-    p.patientId?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    p.patientName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    p.patientEmail?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     p.prediction?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -48,15 +52,23 @@ const PatientHistory = () => {
           <h2 className="text-2xl font-bold">Patient History</h2>
           <p className="text-slate-400 mt-1">View all prediction records and patient data</p>
         </div>
-        <div className="flex items-center gap-2 bg-slate-900/50 px-4 py-2 rounded-lg border border-slate-800">
-          <Search size={18} className="text-slate-400" />
-          <input
-            type="text"
-            placeholder="Search by ID or prediction..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="bg-transparent border-none outline-none text-sm w-64"
-          />
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 bg-slate-900/50 px-4 py-2 rounded-lg border border-slate-800">
+            <Search size={18} className="text-slate-400" />
+            <input
+              type="text"
+              placeholder="Search by name, email or prediction..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="bg-transparent border-none outline-none text-sm w-64"
+            />
+          </div>
+          <button
+            onClick={fetchPatients}
+            className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg transition-colors"
+          >
+            Refresh
+          </button>
         </div>
       </div>
 
@@ -65,11 +77,11 @@ const PatientHistory = () => {
           <table className="w-full">
             <thead className="bg-slate-800/50">
               <tr>
-                <th className="text-left p-4 text-sm font-semibold text-slate-400">Patient ID</th>
+                <th className="text-left p-4 text-sm font-semibold text-slate-400">Name</th>
+                <th className="text-left p-4 text-sm font-semibold text-slate-400">Email</th>
+                <th className="text-left p-4 text-sm font-semibold text-slate-400">Phone</th>
                 <th className="text-left p-4 text-sm font-semibold text-slate-400">Prediction</th>
                 <th className="text-left p-4 text-sm font-semibold text-slate-400">Probability</th>
-                <th className="text-left p-4 text-sm font-semibold text-slate-400">Confidence</th>
-                <th className="text-left p-4 text-sm font-semibold text-slate-400">Consult Doctor</th>
                 <th className="text-left p-4 text-sm font-semibold text-slate-400">Date</th>
                 <th className="text-left p-4 text-sm font-semibold text-slate-400">Actions</th>
               </tr>
@@ -85,7 +97,13 @@ const PatientHistory = () => {
                 filteredPatients.map((patient) => (
                   <tr key={patient.patientId} className="hover:bg-slate-800/30 transition-colors">
                     <td className="p-4">
-                      <span className="font-mono text-sm">{patient.patientId}</span>
+                      <span className="font-medium">{patient.patientName || 'N/A'}</span>
+                    </td>
+                    <td className="p-4">
+                      <span className="text-sm text-slate-400">{patient.patientEmail || 'N/A'}</span>
+                    </td>
+                    <td className="p-4">
+                      <span className="text-sm text-slate-400">{patient.patientPhone || 'N/A'}</span>
                     </td>
                     <td className="p-4">
                       <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-medium ${
@@ -111,22 +129,6 @@ const PatientHistory = () => {
                         </div>
                         <span className="text-sm">{(patient.probability * 100 || 0).toFixed(1)}%</span>
                       </div>
-                    </td>
-                    <td className="p-4">
-                      <span className={`px-2 py-1 rounded text-xs font-medium ${
-                        patient.confidence === 'High' ? 'bg-danger/20 text-danger' :
-                        patient.confidence === 'Medium' ? 'bg-yellow-500/20 text-yellow-500' :
-                        'bg-slate-700 text-slate-400'
-                      }`}>
-                        {patient.confidence}
-                      </span>
-                    </td>
-                    <td className="p-4">
-                      {patient.consultDoctor ? (
-                        <span className="text-danger text-sm font-medium">Yes</span>
-                      ) : (
-                        <span className="text-slate-500 text-sm">No</span>
-                      )}
                     </td>
                     <td className="p-4">
                       <span className="text-sm text-slate-400">{formatDate(patient.createdAt)}</span>

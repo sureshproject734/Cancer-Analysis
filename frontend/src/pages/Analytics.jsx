@@ -1,25 +1,29 @@
 import React, { useState, useEffect } from 'react';
-import { api } from '../api';
+import { db } from '../firebase';
+import { collection, getDocs, query, orderBy } from 'firebase/firestore';
 import { 
   PieChart, Pie, Cell, ResponsiveContainer, 
   BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid,
   AreaChart, Area, Legend
 } from 'recharts';
 
+const MODEL_METRICS = {
+  accuracy: 0.9649,
+  precision: 0.9589,
+  recall: 0.9859
+};
+
 const Analytics = () => {
-  const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [predictions, setPredictions] = useState([]);
+  const [patients, setPatients] = useState([]);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [analyticsData, historyData] = await Promise.all([
-          api.get('/analytics'),
-          api.get('/patient-history')
-        ]);
-        setStats(analyticsData);
-        setPredictions(historyData || []);
+        const q = query(collection(db, 'patients'), orderBy('createdAt', 'desc'));
+        const snapshot = await getDocs(q);
+        const patientsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        setPatients(patientsData);
       } catch (error) {
         console.error("Error fetching analytics:", error);
       } finally {
@@ -31,21 +35,23 @@ const Analytics = () => {
 
   if (loading) return <div className="text-center py-20 text-slate-400">Loading analytics...</div>;
 
+  const malignantCount = patients.filter(p => p.prediction === 'Malignant').length;
+  const benignCount = patients.filter(p => p.prediction === 'Benign').length;
+
   const pieData = [
-    { name: 'Malignant', value: stats?.malignant_count || 0, color: '#EF4444' },
-    { name: 'Benign', value: stats?.benign_count || 0, color: '#22C55E' },
+    { name: 'Malignant', value: malignantCount, color: '#EF4444' },
+    { name: 'Benign', value: benignCount, color: '#22C55E' },
   ];
 
   const confidenceData = [
-    { name: 'High', value: predictions.filter(p => p.confidence === 'High').length },
-    { name: 'Medium', value: predictions.filter(p => p.confidence === 'Medium').length },
-    { name: 'Low', value: predictions.filter(p => p.confidence === 'Low').length },
+    { name: 'High', value: patients.filter(p => p.confidence === 'High').length },
+    { name: 'Medium', value: patients.filter(p => p.confidence === 'Medium').length },
+    { name: 'Low', value: patients.filter(p => p.confidence === 'Low').length },
   ];
 
-  const trendData = predictions.slice(-10).map((p, i) => ({
+  const trendData = patients.slice(-10).map((p, i) => ({
     index: i + 1,
-    probability: p.probability * 100,
-    prediction: p.prediction === 'Malignant' ? 1 : 0
+    probability: (p.probability || 0) * 100,
   }));
 
   return (
@@ -110,9 +116,9 @@ const Analytics = () => {
       <div className="bg-slate-900/50 p-6 rounded-2xl border border-slate-800">
         <h3 className="text-lg font-bold mb-6">Model Performance</h3>
         <div className="grid grid-cols-3 gap-6">
-          <MetricCard title="Accuracy" value={`${((stats?.model_metrics?.accuracy || 0) * 100).toFixed(2)}%`} />
-          <MetricCard title="Precision" value={`${((stats?.model_metrics?.precision || 0) * 100).toFixed(2)}%`} />
-          <MetricCard title="Recall" value={`${((stats?.model_metrics?.recall || 0) * 100).toFixed(2)}%`} />
+          <MetricCard title="Accuracy" value={`${(MODEL_METRICS.accuracy * 100).toFixed(2)}%`} />
+          <MetricCard title="Precision" value={`${(MODEL_METRICS.precision * 100).toFixed(2)}%`} />
+          <MetricCard title="Recall" value={`${(MODEL_METRICS.recall * 100).toFixed(2)}%`} />
         </div>
       </div>
     </div>
