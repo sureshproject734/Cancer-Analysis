@@ -65,13 +65,13 @@ const Dashboard = () => {
         <StatCard 
           title="Malignant Cases" 
           value={stats.malignant_count} 
-          icon={<AlertTriangle className="text-danger" />} 
+          icon={<AlertTriangle className="text-red-500" />} 
           sub={`${((stats.malignant_count / stats.total_predictions) * 100 || 0).toFixed(1)}% ratio`}
         />
         <StatCard 
           title="Benign Cases" 
           value={stats.benign_count} 
-          icon={<CheckCircle className="text-success" />} 
+          icon={<CheckCircle className="text-green-500" />} 
           sub={`${((stats.benign_count / stats.total_predictions) * 100 || 0).toFixed(1)}% ratio`}
         />
         <StatCard 

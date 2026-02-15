@@ -120,7 +120,7 @@ const Navbar = ({ user, onLogout }) => (
       <div className="p-4 bg-slate-800/50 rounded-lg">
         <p className="text-xs text-slate-400 mb-1">Model Status</p>
         <div className="flex items-center gap-2">
-          <div className="w-2 h-2 rounded-full bg-success"></div>
+          <div className="w-2 h-2 rounded-full bg-green-500"></div>
           <span className="text-sm text-slate-200 font-medium">Active & Ready</span>
         </div>
       </div>
@@ -217,7 +217,7 @@ function AppContent() {
 
 function App() {
   return (
-    <Router>
+    <Router basename="/Cancer-Analysis">
       <AuthProvider>
         <Routes>
           <Route path="/login" element={<LoginPage />} />

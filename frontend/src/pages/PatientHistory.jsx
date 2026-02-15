@@ -108,8 +108,8 @@ const PatientHistory = () => {
                     <td className="p-4">
                       <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-medium ${
                         patient.prediction === 'Malignant' 
-                          ? 'bg-danger/20 text-danger' 
-                          : 'bg-success/20 text-success'
+                          ? 'bg-red-500/20 text-red-500' 
+                          : 'bg-green-500/20 text-green-500'
                       }`}>
                         {patient.prediction === 'Malignant' ? (
                           <AlertTriangle size={14} />
@@ -123,8 +123,11 @@ const PatientHistory = () => {
                       <div className="flex items-center gap-2">
                         <div className="w-16 h-2 bg-slate-700 rounded-full overflow-hidden">
                           <div 
-                            className={`h-full ${patient.prediction === 'Malignant' ? 'bg-danger' : 'bg-success'}`}
-                            style={{ width: `${(patient.probability || 0) * 100}%` }}
+                            className="h-full rounded-full"
+                            style={{ 
+                              width: `${(patient.probability || 0) * 100}%`,
+                              backgroundColor: patient.prediction === 'Malignant' ? '#EF4444' : '#22C55E'
+                            }}
                           />
                         </div>
                         <span className="text-sm">{(patient.probability * 100 || 0).toFixed(1)}%</span>
@@ -189,11 +192,11 @@ const PatientDetailModal = ({ patient, onClose }) => {
         </div>
 
         <div className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
-          <div className={`p-4 rounded-xl mb-6 ${isMalignant ? 'bg-danger/10 border border-danger/30' : 'bg-success/10 border border-success/30'}`}>
+          <div className="p-4 rounded-xl mb-6 bg-slate-800/50 border border-slate-700">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-slate-400">Prediction</p>
-                <p className={`text-2xl font-bold ${isMalignant ? 'text-danger' : 'text-success'}`}>
+                <p className={`text-2xl font-bold ${isMalignant ? 'text-red-500' : 'text-green-500'}`}>
                   {patient.prediction}
                 </p>
               </div>

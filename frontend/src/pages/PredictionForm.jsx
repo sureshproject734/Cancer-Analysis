@@ -253,7 +253,7 @@ const PredictionForm = () => {
 
         <div className="space-y-6">
           {error && (
-            <div className="bg-danger/10 border border-danger/30 p-4 rounded-xl text-danger">
+            <div className="bg-red-500/10 border border-red-500/30 p-4 rounded-xl text-red-500">
               <p>{error}</p>
             </div>
           )}
@@ -279,21 +279,22 @@ const PredictionForm = () => {
 const ResultCard = ({ result }) => {
   const isMalignant = result.prediction === 'Malignant';
   const probPercent = Math.round(result.probability * 100);
+  const barColor = isMalignant ? '#EF4444' : '#22C55E';
 
   return (
     <div className="bg-slate-900/50 rounded-2xl border border-slate-800 overflow-hidden">
-      <div className={`p-6 ${isMalignant ? 'bg-danger/20' : 'bg-success/20'}`}>
+      <div className={`p-6 ${isMalignant ? 'bg-red-900/30' : 'bg-green-900/30'}`}>
         <div className="flex items-center justify-between">
           <div>
             <p className="text-sm text-slate-400">Prediction Result</p>
-            <h3 className={`text-3xl font-bold ${isMalignant ? 'text-danger' : 'text-success'}`}>
+            <h3 className={`text-3xl font-bold ${isMalignant ? 'text-red-500' : 'text-green-500'}`}>
               {result.prediction}
             </h3>
           </div>
           {isMalignant ? (
-            <AlertTriangle size={48} className="text-danger" />
+            <AlertTriangle size={48} className="text-red-500" />
           ) : (
-            <CheckCircle size={48} className="text-success" />
+            <CheckCircle size={48} className="text-green-500" />
           )}
         </div>
       </div>
@@ -304,11 +305,12 @@ const ResultCard = ({ result }) => {
             <span className="text-slate-400">Confidence Probability</span>
             <span className="font-bold">{probPercent}%</span>
           </div>
-          <div className="h-3 bg-slate-800 rounded-full overflow-hidden">
+          <div className="h-4 bg-slate-700 rounded-full overflow-hidden">
             <div 
-              className={`h-full rounded-full ${isMalignant ? 'bg-danger' : 'bg-success'}`}
+              className="h-full rounded-full"
               style={{ 
                 width: `${probPercent}%`,
+                backgroundColor: barColor,
                 transition: 'width 1s ease-in-out'
               }}
             />
@@ -318,7 +320,7 @@ const ResultCard = ({ result }) => {
         <div className="flex items-center gap-2">
           <span className="text-sm text-slate-400">Confidence Level:</span>
           <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-            result.confidence === 'High' ? 'bg-danger/20 text-danger' :
+            result.confidence === 'High' ? 'bg-red-500/20 text-red-500' :
             result.confidence === 'Medium' ? 'bg-yellow-500/20 text-yellow-500' :
             'bg-slate-700 text-slate-400'
           }`}>
@@ -328,18 +330,18 @@ const ResultCard = ({ result }) => {
 
         <div className="bg-slate-800/50 p-4 rounded-xl">
           <div className="flex items-start gap-2">
-            <Info size={18} className="text-secondary mt-0.5 flex-shrink-0" />
+            <Info size={18} className="text-blue-500 mt-0.5 flex-shrink-0" />
             <p className="text-sm">{result.recommendation}</p>
           </div>
         </div>
 
         {result.consultDoctor && (
-          <div className="bg-danger/10 border border-danger/30 p-4 rounded-xl">
-            <div className="flex items-center gap-2 text-danger font-semibold mb-2">
+          <div className="bg-red-500/10 border border-red-500/30 p-4 rounded-xl">
+            <div className="flex items-center gap-2 text-red-500 font-semibold mb-2">
               <AlertTriangle size={18} />
               Medical Consultation Recommended
             </div>
-            <p className="text-sm text-danger/80">Please consult with an oncologist for further diagnosis.</p>
+            <p className="text-sm text-red-500/80">Please consult with an oncologist for further diagnosis.</p>
           </div>
         )}
 
@@ -348,7 +350,7 @@ const ResultCard = ({ result }) => {
           <ul className="space-y-2">
             {result.precautions.map((precaution, index) => (
               <li key={index} className="flex items-center gap-2 text-sm text-slate-400">
-                <span className="w-1.5 h-1.5 rounded-full bg-secondary" />
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
                 {precaution}
               </li>
             ))}

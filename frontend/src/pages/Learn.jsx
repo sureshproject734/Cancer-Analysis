@@ -291,12 +291,12 @@ const FeatureModal = ({ feature, onClose }) => (
         </div>
 
         <div className="grid grid-cols-2 gap-4">
-          <div className="bg-success/10 p-3 rounded-lg border border-success/30">
-            <p className="text-xs text-success mb-1">Normal Range</p>
+          <div className="bg-green-500/10 p-3 rounded-lg border border-green-500/30">
+            <p className="text-xs text-green-500 mb-1">Normal Range</p>
             <p className="font-medium">{feature.normal}</p>
           </div>
-          <div className="bg-danger/10 p-3 rounded-lg border border-danger/30">
-            <p className="text-xs text-danger mb-1">Malignant Indicator</p>
+          <div className="bg-red-500/10 p-3 rounded-lg border border-red-500/30">
+            <p className="text-xs text-red-500 mb-1">Malignant Indicator</p>
             <p className="font-medium">{feature.malignant}</p>
           </div>
         </div>
