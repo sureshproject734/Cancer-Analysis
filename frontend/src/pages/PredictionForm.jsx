@@ -278,7 +278,7 @@ const PredictionForm = () => {
 
 const ResultCard = ({ result }) => {
   const isMalignant = result.prediction === 'Malignant';
-  const probPercent = (result.probability * 100).toFixed(1);
+  const probPercent = Math.round(result.probability * 100);
 
   return (
     <div className="bg-slate-900/50 rounded-2xl border border-slate-800 overflow-hidden">
@@ -306,8 +306,11 @@ const ResultCard = ({ result }) => {
           </div>
           <div className="h-3 bg-slate-800 rounded-full overflow-hidden">
             <div 
-              className={`h-full ${isMalignant ? 'bg-danger' : 'bg-success'}`}
-              style={{ width: `${probPercent}%`, transition: 'width 0.5s ease' }}
+              className={`h-full rounded-full ${isMalignant ? 'bg-danger' : 'bg-success'}`}
+              style={{ 
+                width: `${probPercent}%`,
+                transition: 'width 1s ease-in-out'
+              }}
             />
           </div>
         </div>
